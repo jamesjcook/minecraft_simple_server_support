@@ -31,20 +31,35 @@ function get_server_type (){
 	debug_mode=0;
     fi;
     # Vanilla serverfile
-    serverext="jar";
+    #serverext="jar";
     #server_type="minecraft_server";
 
-    all_server_files=(paper forge fabric spigot minecraft_server);
+    #forge 
+    all_server_files=(paper fabric spigot minecraft_server bedrock_server);
     server_type="";
     let alternate_files_found=0;
     for serverfile in ${all_server_files[@]}; do
-	server_file=$(ls -tr ${serverdir}/${serverfile}*${serverext} 2> /dev/null|tail -n 1);
+	#server_file=$(ls -tr ${serverdir}/${serverfile}*${serverext} 2> /dev/null|tail -n 1);
+	server_file=$(find $serverdir -maxdepth 1 -name "${serverfile}*" -size +2M -printf "%T@ %f\n" | sort -nr | head -n 1 | sed 's/[^ ]\+ //')
+	#server_file=$(ls -tr $(for f in $( cd $serverdir; find "${serverdir}" -maxdepth 1 -type f -size +2M -name "${serverfile}*" -exec basename {} \; ); do if [ ! -z "$f" ];then echo $serverdir/$f;else echo "NOFILEFOR$serverfile";fi; done)|tail -n1 )
+	
+	# This didn't work either due to paper.yml vs paper-VER.jar...
+	#server_file=$(ls -tr ${serverdir}/${serverfile}* 2> /dev/null|tail -n 1);
+	#if [ ! -z "$server_file" ];then
+	#    if [ -z "$(find "$server_file" -prune -size +2M)" ];then
+	#	unset server_file; fi;
+	#fi;
+	# Tried more complicated one liners to set min size, and they were not effective, and also ugly. 
+	#server_file=$(find "${serverdir}" -maxdepth 1 -type f -size +2M -name "${serverfile}*")
+	#server_file=$( ls -tr $(for f in $(find "${serverdir}" -maxdepth 1 -type f -size +2M -name "${serverfile}*"); do echo "${serverdir}/$f"; done ) 2> /dev/null |tail -n 1 )
+	#server_file=$(find "${serverdir}" -maxdepth 1 -type f -size +2M -name "${serverfile}*"|sort -n |tail -n 1);
 	if [ ! -z "$server_file" ];then
 	    if [ $debug_mode -ge 1 ];then
 		echo "Found serverfile:$server_file" 1>&2 ;
 	    fi;
 	    if [ -z "$found_server_file" ];then
 		found_server_file=$server_file;
+		serverext=${found_server_file##*.};
 		server_type=$serverfile;
 	    else
 		let alternate_files_found=$alternate_files_found+1;
@@ -55,6 +70,9 @@ function get_server_type (){
 	echo "Additional server files matched, that shouldn't happen";
 	echo "We're going to exit for safety.";
 	exit 1 ; fi;
+    if [ -z "$found_server_file" ];then
+	echo "Error: No server file found" 1>&2;
+	exit 1; fi;
     echo $server_type $serverext $(basename $found_server_file);
     return;
 }
@@ -68,15 +86,17 @@ function get_mc_download_url () {
     # This is for minecraft urls.
     # Use curl to get page with download link on it.
     if [ ! -e ${downloadpath}/dlpage.txt ];then
-	echo "Fetch download page";
+	echo "Fetch download page" 1>&2;
 	curl ${urlofpage} > ${downloadpath}/dlpage.txt
     fi;
-    echo "get version number"
-    versionnumber=$(sed -nr "s/.*(${server_type}\.)((:?[0-9]+\.?)+)(${serverext}).*/\2/p" <${downloadpath}/dlpage.txt);
-    echo "get server file"
+    echo "get version number" 1>&2;
+    versionnumber=$(sed -nr "s/.*(${server_type}\.)((:?[0-9]+\.?)+)(${serverext}).*/\2/p" <${downloadpath}/dlpage.txt |head -n 1);
+    echo "get server file" 1>&2;
     server_file=$(sed -nr "s/.*(${server_type})((:?\.[0-9]+\.?)+)(${serverext}).*/\1\2\4/p" <${downloadpath}/dlpage.txt |head -n 1);
-    echo "get url"
+    echo "get url" 1>&2;
     downloadurl=$(sed -nr "s/.*<a href=\"(https:\/\/launcher.mojang.com.*${serverext})\".*/\1/p" <${downloadpath}/dlpage.txt);
+
+    #echo u:$downloadurl v:$versionnumber f:$server_file 1>&2;
     echo $downloadurl $versionnumber $server_file;
     return;
 }

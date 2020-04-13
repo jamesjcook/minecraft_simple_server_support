@@ -31,10 +31,10 @@ if [ ! -e "${serverdir}/simple_support_functions.bash" ];then
 source "${serverdir}/simple_support_functions.bash";
 
 # get_server_type
-read -r server_type serverext current_server_file <<<$(get_server_type $serverdir);
+read -r server_type serverext current_server_file <<<$(get_server_type $serverdir 1);
 
 if [ -z "$current_server_file" -o ! -e "$current_server_file" ];then
-    echo "Error: couldn't resolve server_file_base";
+    echo "Error: couldn't resolve server_type for $serverdir";
     exit 1; fi;
 
 if [ ! -e $downloadpath ];then
@@ -44,8 +44,12 @@ fi;
 minecraft_server_url="https://www.minecraft.net/en-us/download/server";
 if [ $server_type == minecraft_server ];then
     read -r downloadurl versionnumber new_server_file <<<$(get_mc_download_url $minecraft_server_url $server_type $serverext $downloadpath);
+    if [ -z "$new_server_file" ];then
+	echo "Error: server file not found for mc";
+	cleanup;
+	exit 1; fi;
+    #echo "$downloadurl"; echo "$new_server_file"; exit;
 fi;
-
 
 #https://papermc.io/api/{API_VERSION}/{PROJECT_NAME}/{PROJECT_VERSION}/{BUILD_ID}/download
 paper_api='v1'
@@ -61,22 +65,18 @@ spigot_url="";
 if [ "$server_type" == paper ];then
     downloadurl=$paper_url; fi;
 
-if [ $server_type == minecraft_server ];then
-    urlofpage=$minecraft_server_url; fi;
-
-
 if [ "$USER" != "${scriptuser}" ]
 then
     echo "Error: Wrong user, run as ${scriptuser}";
-    cleanup
+    cleanup;
     exit 1;
-fi
+fi;
 
 if [ -z "$downloadurl" ]; then
-    echo "error: didnt get download location";
-    cleanup
+    echo "Error: didnt get download location";
+    cleanup;
     exit;
-fi
+fi;
 
 echo  "mc_v=\"$versionnumber\""
 #echo  "mc_f=\"$new_server_file\""
@@ -84,20 +84,28 @@ echo  "mc_url=\"$downloadurl\""
 
 if [ -f "${serverdir}/${new_server_file}" ]; then
     echo "Status: Minecraft server update not needed."
-    cleanup
+    cleanup;
     exit;
-else
-    echo didnt find "${serverdir}/${new_server_file}"
+#else
+#    echo didnt find "${serverdir}/${new_server_file}"
 fi
 
 if [ ! -f "${downloadpath}/${new_server_file}" ]; then
     #ls ${downloadpath}
     #echo wget -nc $downloadurl -P "${downloadpath}";
+    echo "Fetching $new_server_file";
     ( cd $downloadpath; curl -JLO $downloadurl )
-    read -r server_type serverext new_server_file <<<$(get_server_type $downloadpath);
     if [ -z "$new_server_file" ];then
-	echo "Error: Couldn't get downloaded file name";
-	exit 1; fi;
+	# Only look up the new server file name if we dont have it yet.
+	# This wiggle here is because the default name of minecraft server is simply
+	# server.
+	# Paper at least names its output jar by their internal version, but we
+	# don't know that until we download due to grabbing latest. 
+	read -r server_type serverext new_server_file <<<$(get_server_type $downloadpath);
+	if [ -z "$new_server_file" ];then
+	    echo "Error: Couldn't get downloaded file name";
+	    exit 1; fi;
+    fi;
     #echo "$server_type.$serverext '$new_server_file'";exit;
     # if server jar file isnt name reasonably, rename it in downloadpath.
     if [ ! -e "${downloadpath}/${new_server_file}" ];then
@@ -176,7 +184,7 @@ then
 	fi
 	cleanup
     else
-	echo "Status: Minecraft server update needed but not done";
+	echo "Status: Minecraft server update needed but not done"
 	echo "    cleanup also skipped, examine $downloadpath to continue manually";
     fi
 else
