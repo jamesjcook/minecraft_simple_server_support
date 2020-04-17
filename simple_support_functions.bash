@@ -3,23 +3,60 @@
 
 function stop_server () {
     server_type=$1;
+    serverdir=$2;
+
+    #world=$(sed -nr 's/level-name=(.*)/\1/p' < "$serverdir/server.properties");
+    #rcon.port=25575
+    #enable-rcon=true
+    rcon=$(sed -nr 's/enable-rcon=(.*)/\1/p' < "$serverdir/server.properties" |grep -c 'true');
+    if [ $rcon -eq 1 ];then
+	echo "issusing mcrcon stop";
+	pw=$(sed -nr 's/rcon.password=(.*)/\1/p' < "$serverdir/server.properties");
+	port=$(sed -nr 's/rcon.port=(.*)/\1/p' < "$serverdir/server.properties");
+	cmd_pref=""
+	# default minecraft servertype ends in server, and only they do, so we use
+	# that to detect the proper setting. 
+	if [ $( echo "$server_type"|grep -c 'server') -gt 0 ]; then
+	    cmd_pref="/"
+	fi;
+	echo "${cmd_pref}stop" | mcrcon -H localhost -p "$pw" -P $port;
+    fi;
     
-    # TODO: enhance to use rcon.
     #serverpid=`ps ax | grep ${server_type} | head -n 1 | cut -d " " -f 1 `
     #servertoolpid=`ps ax | grep ${servertool} | head -n 1 | cut -d " " -f 1 `
     #serverpid=`ps -ef | grep $server_type | awk '{ print $2 }'|head -n 1`
     # ps -ef --sort=-pcpu | awk '/.*minecraft_server.*/ {print $2}'
-    echo "serverpid=ps -ef --sort=-pcpu | awk "/$server_type/"'{ print \$2 }'|head -n 1";
-    serverpid=$(ps -ef --sort=-pcpu | awk "/$server_type/"'{ print $2 }'|head -n 1)
-    echo ""
-    echo "kill ${serverpid}"
-    kill ${serverpid}
 
-    if [ "${servertoolcount}" -ge 2 ]; then
+    echo "Doublechecking pid stop(will wait up to 30 seconds)."
+    #echo "serverpid=ps -ef --sort=-pcpu | awk "/$server_type/"'{ print \$2 }'|head -n 1";
+    #serverpid=$(ps -ef --sort=-pcpu | awk "/$server_type/"'{ print $2 }'|head -n 1)
+    echo "serverpid=$(pgrep -af "$server_type" |grep -v tmux|awk '{ print $1}')";
+    serverpid=$(pgrep -af "$server_type" |grep -v tmux|awk '{ print $1}');
+    wait=0;
+    WAIT_LIM=30;
+    while [ ! -z "$serverpid" -a $wait -lt $WAIT_LIM ]; do 
+	sleep 1; 
+	serverpid=$(pgrep -af "$server_type" |grep -v tmux|awk '{ print $1}')
+	let wait=$wait+1;
+	echo -n ".";
+    done
+    echo "";
+    if [ ! -z "$serverpid" ];then
+	echo "Waited $WAIT_LIM seconds for process to close";
+	echo "Status: Minecraft server update needed."
+	read -n 1 -p " Do you wish to force close? y/N" choice
+	if [ "$choice" == "y" -o "$choice" == "Y" ]
+	then echo "";
+	     echo "kill ${serverpid}"
+	     kill ${serverpid};
+	fi;
+    fi;
+
+    #if [ "${servertoolcount}" -ge 2 ]; then
 	#servertoolpid=`ps -ef --sort=-pcup |grep $servertool | awk '{ print $2 }'|head -n 1`
-	servertoolpid=$(ps -ef --sort=-pcu | awk "/$servertool/{ print $2 }"|head -n 1)
-	kill -9 ${servertoolpid}
-    fi
+    #	servertoolpid=$(ps -ef --sort=-pcu | awk "/$servertool/{ print $2 }"|head -n 1)
+    #	kill -9 ${servertoolpid}
+    #fi
     return;
 }
 

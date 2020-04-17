@@ -136,7 +136,7 @@ then
 	servertoolcount=$(ps ax | grep -c ${servertool})
 	if [ "${servercount}" -ge 2 -o "${servertoolcount}" -ge 2 ]
 	then # close minecraft
-	    stop_server $server_type
+	    stop_server $server_type $serverdir
 	fi
 
 	sleep_count=0;
