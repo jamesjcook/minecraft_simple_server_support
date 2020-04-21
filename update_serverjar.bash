@@ -132,57 +132,30 @@ then
     then echo "";
 	# check if server is running here.
 	# if running
-	servercount=$(ps ax | grep -c ${server_type})
-	servertoolcount=$(ps ax | grep -c ${servertool})
-	if [ "${servercount}" -ge 2 -o "${servertoolcount}" -ge 2 ]
-	then # close minecraft
-	    stop_server $server_type $serverdir
-	fi
+	# close minecraft
+	stop_server $server_type $serverdir
 
-	sleep_count=0;
-	while [ "$servercount" -ge 2 -a "$sleep_count" -lt 5 -o "$servertoolcount" -ge 2 -a "$sleep_count" -lt 5 ];
-	do #then #
-	    servercount=$(ps ax | grep -c ${server_type});
-	    servertoolcount=$(ps ax | grep -c ${servertool});
-            sleep_count=$((++sleep_count));
-	    #expr $sleep_count + 1
-	    sleep 1;
-	    echo -n "."
-	    #fi 
-	done
+	
+	cp "${downloadpath}/${new_server_file}" "${serverdir}/${new_server_file}"
+	chown "${mcuser}" "${serverdir}/${new_server_file}"
+	chmod a+r "${serverdir}/${new_server_file}"
 
-	servercount=$(ps ax | grep -c ${server_type})
-	servertoolcount=$(ps ax | grep -c ${servertool})
-	if [ "${servercount}" -le 1 -a "${servertoolcount}" -le 1 ]
-	then # have to do le 1, because ps ax will find the grep as well as the actuall process
-        # cp /Media/Bulk\ Storage/downloads/000\ games/minecraft/minecraft_server.jar ${downloadpath}/${server_type}
-	#echo "Sleeping for 25 seconds before contiuing"
-	#sleep 25;
-	    #cp "${downloadpath}/${server_type}" "${downloadpath}/${server_type}"
-	    cp "${downloadpath}/${new_server_file}" "${serverdir}/${new_server_file}"
-	    chown "${mcuser}" "${serverdir}/${new_server_file}"
-	    chmod a+r "${serverdir}/${new_server_file}"
-
-	    diff "${downloadpath}/${new_server_file}" "${serverdir}/${new_server_file}" >> /dev/null
-	    postcompare=$?
-	    if [ "$precompare" != "$postcompare" ] 
+	diff "${downloadpath}/${new_server_file}" "${serverdir}/${new_server_file}" >> /dev/null
+	postcompare=$?
+	if [ "$precompare" != "$postcompare" ] 
+	then 
+	    if [ "$postcompare" == "0" ]
 	    then 
-		if [ "$postcompare" == "0" ]
-		then 
-		    echo "Status: ${server_type} update Succes"
-
-		else
-		    echo "ERROR: ${server_type} update error "
-		    echo "     :  Postcompare different from Precompare but not zero."
-		fi
+		echo "Status: ${server_type} update Succes"
+		
 	    else
 		echo "ERROR: ${server_type} update error "
-		echo "     : Postcompare same as Precompare, file did not sucessfully copy from download directory."
+		echo "     :  Postcompare different from Precompare but not zero."
 	    fi
 	else
-	    "ERROR: minecraft server open and did not close"
+	    echo "ERROR: ${server_type} update error "
+	    echo "     : Postcompare same as Precompare, file did not sucessfully copy from download directory."
 	fi
-	cleanup
     else
 	echo "Status: Minecraft server update needed but not done"
 	echo "    cleanup also skipped, examine $downloadpath to continue manually";
