@@ -54,8 +54,12 @@ fi;
 #https://papermc.io/api/{API_VERSION}/{PROJECT_NAME}/{PROJECT_VERSION}/{BUILD_ID}/download
 paper_api='v1'
 paper_proj='paper'
-if [ -z "$versionnumber" ];then 
-    versionnumber='1.15.2'; fi;
+if [ -z "$versionnumber" ];then
+    echo "ERROR finding verrsion number from $minecraft_server_url";
+    exit 1;
+#    versionnumber='1.15.2'; fi;
+#    versionnumber='1.16.4';
+fi;
 paper_build='latest'
 paper_url="https://papermc.io/api/${paper_api}/${paper_proj}/${versionnumber}/${paper_build}/download";
 
