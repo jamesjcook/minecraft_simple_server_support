@@ -40,8 +40,13 @@ if [ "$serverext" == "jar" ];then
     # basic as offered from minec...net
     simple_java_params="-Xmx1024M -Xms1024M";
     # On research people indicate not many GB needed for server.
-    simple_java_params="-Xmx2G -Xms2G";
+    # Tested 4G briefly while generating terrain and never saw over 3GB used
+    # however, constant cpu of 360% was in effect.
+    # The more the merrier memory suggestion is from the adv param mc nerd referencing his server running with 12.
+    # In simple testing strongly suspect 11 is overkill, and 3 would be plenty for expected usage. While server is not busy with anything else 11 will be left.
+    simple_java_params="-Xmx11G -Xms11G";
     #simple_java_params="-Xmx6G -Xms6G";
+    #simple_java_params="-Xmx4G -Xms4G";
     # advanced by MC nerd per following post. Of note, he was using a paper mc server
     # https://aikar.co/2018/07/02/tuning-the-jvm-g1gc-garbage-collector-flags-for-minecraft/
     # Tested the adv params with 2G server and found performance was worse...
